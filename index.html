@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <title>LBA 講師ポータル</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <style>
+    body {
+      font-family: system-ui;
+      padding: 24px;
+      max-width: 480px;
+      margin: 0 auto;
+      background: #f7f7f7;
+    }
+    h1 { font-size: 22px; margin-bottom: 16px; }
+    .card {
+      background: #fff;
+      padding: 20px;
+      border-radius: 12px;
+      margin-bottom: 24px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+    }
+    button {
+      width: 100%;
+      padding: 14px;
+      background: #2c7be5;
+      color: #fff;
+      font-size: 16px;
+      border: none;
+      border-radius: 8px;
+      margin-top: 12px;
+    }
+    input {
+      width: 100%;
+      padding: 12px;
+      margin-top: 6px;
+      margin-bottom: 12px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      font-size: 15px;
+    }
+  </style>
+</head>
+
+<body>
+
+  <h1>LBA 講師ポータル</h1>
+
+  <!-- ① 講師メール入力 -->
+  <div class="card">
+    <h2 style="margin-top:0;">講師アカウント</h2>
+    <p>Stripe決済に使用するメールアドレスを入力してください。</p>
+    <input id="email" type="email" placeholder="you@example.com">
+  </div>
+
+  <!-- ② プラン選択 -->
+  <div class="card">
+    <h2 style="margin-top:0;">プラン選択</h2>
+
+    <button onclick="startCheckout('simple')">
+      SIMPLE（¥1,980 / 月・30日無料）
+    </button>
+
+    <button onclick="startCheckout('standard')" style="background:#3bb273;">
+      STANDARD（¥2,480 / 月・30日無料）
+    </button>
+  </div>
+
+
+  <script>
+    const checkoutApiUrl =
+      "https://script.google.com/macros/s/AKfycbw1TYXXafUnpd5EIVnhyExIl9oojaarieI9zFw8kCclVHVB-rlTl_u15o991lvGoIKF/exec";
+
+    function startCheckout(plan) {
+      const email = document.getElementById("email").value;
+      if (!email) {
+        alert("メールアドレスを入力してください");
+        return;
+      }
+
+      // tenantId を URL から取得
+      const params = new URLSearchParams(location.search);
+      const tenantId = params.get("tenantId");
+      if (!tenantId) {
+        alert("tenantId がありません。URLに ?tenantId=T001 を追加してください。");
+        return;
+      }
+
+      fetch(checkoutApiUrl, {
+        method: "POST",
+        body: JSON.stringify({ plan, email, tenantId })
+      })
+        .then(res => res.json())
+        .then(json => {
+          if (json.ok) {
+            // Stripe Checkout に遷移
+            location.href = json.url;
+          } else {
+            alert("エラー：" + JSON.stringify(json));
+          }
+        });
+    }
+  </script>
+
+</body>
+</html>
