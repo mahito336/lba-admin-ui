@@ -1,29 +1,65 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="utf-8">
-  <title>決済成功</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <style>
-    body { font-family: system-ui; padding: 24px; text-align:center; }
-    h1 { color:#2c7be5; }
-    a { display:block; margin-top:20px; color:#2c7be5; }
-  </style>
+<meta charset="UTF-8">
+<title>購入完了</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  body{font-family:system-ui;background:#f5f5f5;padding:24px;}
+  .wrap{
+    max-width:440px;margin:0 auto;background:#fff;padding:24px;
+    border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.1);
+  }
+  .url-box{background:#eee;padding:12px;border-radius:6px;word-break:break-all;}
+</style>
 </head>
 <body>
-  <h1>決済が完了しました！</h1>
-  <p>まもなく LBA 環境が有効になります。</p>
+<div class="wrap">
+  <h2>ご購入ありがとうございます</h2>
+  <p>処理が完了しました。</p>
+  <p id="msg">確認中です…</p>
+  <div id="result" style="display:none;">
+    <h3>管理画面URL</h3>
+    <div class="url-box" id="adminUrl"></div>
+  </div>
+</div>
 
-  <div id="next"></div>
+<script>
+async function main() {
 
-  <script>
-    const params = new URLSearchParams(location.search);
-    const tenantId = params.get("tenantId");
+  const params = new URLSearchParams(location.search);
 
-    document.getElementById("next").innerHTML =
-      `<a href="https://mahito336.github.io/lba-admin/?tenantId=${tenantId}">
-        ▶ 講師ポータルに戻る
-      </a>`;
-  </script>
+  const sessionId = params.get("session_id");
+  const tenantId = params.get("tenantId");
+
+  if (!tenantId) {
+    document.getElementById("msg").innerText = "tenantId が見つかりません。";
+    return;
+  }
+
+  // ★ CENTRAL_API の lookup を叩く
+  const api = "https://script.google.com/macros/s/AKfycbzCuEAP8p2J5g16QIciHrv7X9fD5H4XdUBQfwEiqE9DjytVClqrPemseFt7GD7a3xus/exec";
+
+  try {
+    const res = await fetch(api + "?mode=lookup&tenantId=" + tenantId);
+    const json = await res.json();
+
+    if (!json.ok) {
+      document.getElementById("msg").innerText = "まだ構築中です。数秒後に再読み込みしてください。";
+      return;
+    }
+
+    document.getElementById("msg").innerText = "準備ができました！";
+    document.getElementById("result").style.display = "block";
+    document.getElementById("adminUrl").innerText = json.webappUrl;
+
+  } catch(err) {
+    document.getElementById("msg").innerText = "通信エラー：" + err;
+  }
+}
+
+main();
+</script>
+
 </body>
 </html>
