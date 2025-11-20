@@ -75,7 +75,7 @@ async function buy(plan) {
   document.getElementById("msg").innerText = "Checkout を作成中…";
 
   // ★ Mahito の GAS LBA_CHECKOUT_API
-  const api = "https://script.google.com/macros/s/AKfycbw1TYXXafUnpd5EIVnhyExIl9oojaarieI9zFw8kCclVHVB-rlTl_u15o991lvGoIKF/exec";
+  const api = "https://lba-stripe-webhook.mahito-contact.workers.dev/create-checkout";
 
   const payload = {
     email: email,
