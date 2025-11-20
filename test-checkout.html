@@ -87,7 +87,6 @@ async function buy(plan) {
     const res = await fetch(api, {
       method: "POST",
       body: JSON.stringify(payload),
-      headers: { "Content-Type": "application/json" }
     });
 
     const json = await res.json();
