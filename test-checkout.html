@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>LBA 購入テスト</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body {
+      font-family: system-ui, sans-serif;
+      background: #f5f5f5;
+      padding: 24px;
+    }
+    .wrap {
+      max-width: 420px;
+      margin: 0 auto;
+      background: #fff;
+      border-radius: 12px;
+      padding: 24px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    input {
+      width: 100%;
+      padding: 12px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      font-size: 15px;
+      margin-bottom: 18px;
+    }
+    button {
+      width: 100%;
+      padding: 14px;
+      border: none;
+      border-radius: 8px;
+      background: #000;
+      color: #fff;
+      font-size: 16px;
+      margin-bottom: 12px;
+      cursor: pointer;
+    }
+    button:hover { background: #333; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h2>LBA 購入テスト</h2>
+
+    <label>メールアドレス</label>
+    <input id="email" type="email" placeholder="you@example.com">
+
+    <button onclick="buy('simple')">
+      Simple プラン（¥980/月）
+    </button>
+
+    <button onclick="buy('standard')">
+      Standard プラン（¥1,480/月）
+    </button>
+
+    <p id="msg"></p>
+  </div>
+
+<script>
+async function buy(plan) {
+
+  const email = document.getElementById("email").value.trim();
+  if (!email) {
+    alert("メールアドレスを入力してください");
+    return;
+  }
+
+  // ★ 仮テナントIDを生成（UI側で6桁）
+  const tenantId = "T" + Math.floor(Math.random() * 999999)
+    .toString()
+    .padStart(6, "0");
+
+  document.getElementById("msg").innerText = "Checkout を作成中…";
+
+  // ★ Mahito の GAS LBA_CHECKOUT_API
+  const api = "https://script.google.com/macros/s/AKfycbwwSZZGDSXaf8YlhsoXRX2SQGSszq3TTvVQdspfqSaKR3l9hLjlW-nuXeHCol7gV4VHDw/exec";
+
+  const payload = {
+    email: email,
+    plan: plan,
+    tenantId: tenantId
+  };
+
+  try {
+    const res = await fetch(api, {
+      method: "POST",
+      body: JSON.stringify(payload),
+      headers: { "Content-Type": "application/json" }
+    });
+
+    const json = await res.json();
+
+    if (!json.ok) {
+      document.getElementById("msg").innerText = "エラー：" + JSON.stringify(json);
+      return;
+    }
+
+    // Stripe Checkout にリダイレクト
+    window.location.href = json.url;
+
+  } catch (err) {
+    document.getElementById("msg").innerText = "通信エラー：" + err;
+  }
+}
+</script>
+
+</body>
+</html>
