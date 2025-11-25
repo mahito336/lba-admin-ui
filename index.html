@@ -1,53 +1,782 @@
-<div id="app">
-  <p>読み込み中です...</p>
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <title>LBA 講師ポータル</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+
+  <style>
+    :root {
+      --bg: #f5f5f7;
+      --bg-elevated: #ffffff;
+      --border-subtle: #e3e3ea;
+      --accent: #2563eb;
+      --accent-soft: #dbeafe;
+      --text-main: #111827;
+      --text-sub: #6b7280;
+      --danger: #dc2626;
+      --radius-lg: 16px;
+      --radius-md: 10px;
+      --shadow-soft: 0 12px 30px rgba(15,23,42,0.08);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+        "Noto Sans JP", sans-serif;
+      background: var(--bg);
+      color: var(--text-main);
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    .app-shell {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ----- Top bar ----- */
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 18px;
+      border-bottom: 1px solid var(--border-subtle);
+      background: rgba(255,255,255,0.9);
+      backdrop-filter: blur(8px);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .brand-mark {
+      width: 26px;
+      height: 26px;
+      border-radius: 999px;
+      border: 2px solid var(--accent);
+      position: relative;
+      box-shadow: 0 0 0 2px rgba(37,99,235,0.2);
+    }
+
+    .brand-mark::after {
+      content: "";
+      position: absolute;
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      background: var(--accent);
+      top: 50%;
+      left: 58%;
+      transform: translate(-50%,-50%);
+    }
+
+    .brand-title {
+      font-weight: 600;
+      font-size: 15px;
+    }
+
+    .brand-sub {
+      font-size: 11px;
+      color: var(--text-sub);
+    }
+
+    .topbar-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 11px;
+      color: var(--text-sub);
+    }
+
+    .pill {
+      padding: 3px 8px;
+      border-radius: 999px;
+      font-size: 11px;
+      border: 1px solid var(--border-subtle);
+      background: #fff;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .pill-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: var(--accent);
+    }
+
+    .pill-danger .pill-dot {
+      background: var(--danger);
+    }
+
+    .btn-outline {
+      border-radius: 999px;
+      border: 1px solid var(--border-subtle);
+      padding: 5px 10px;
+      font-size: 11px;
+      background: #fff;
+      cursor: pointer;
+    }
+
+    .btn-outline:hover {
+      border-color: var(--accent);
+    }
+
+    /* ----- Layout ----- */
+    .layout {
+      display: flex;
+      flex: 1;
+      min-height: 0;
+    }
+
+    .sidebar {
+      width: 220px;
+      padding: 18px 12px 18px 16px;
+      border-right: 1px solid var(--border-subtle);
+      background: #fcfcff;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .sidebar-section-label {
+      font-size: 11px;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--text-sub);
+      padding: 0 8px;
+    }
+
+    .nav-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .nav-item {
+      border-radius: 999px;
+      padding: 7px 10px;
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      color: var(--text-sub);
+    }
+
+    .nav-item span.icon {
+      font-size: 15px;
+      width: 18px;
+      text-align: center;
+    }
+
+    .nav-item.active {
+      background: var(--accent-soft);
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    .nav-item:hover {
+      background: rgba(148,163,184,0.15);
+    }
+
+    .sidebar-footer {
+      margin-top: auto;
+      font-size: 11px;
+      color: var(--text-sub);
+      padding: 0 8px;
+    }
+
+    .sidebar-footer small {
+      display: block;
+    }
+
+    /* ----- Main area ----- */
+    .main {
+      flex: 1;
+      padding: 18px 20px 32px;
+      min-width: 0;
+    }
+
+    .status-banner {
+      border-radius: var(--radius-lg);
+      padding: 10px 12px;
+      background: var(--accent-soft);
+      border: 1px solid rgba(37,99,235,0.25);
+      font-size: 12px;
+      margin-bottom: 12px;
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .status-banner .left {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .status-banner strong {
+      font-size: 13px;
+    }
+
+    .status-banner .right {
+      white-space: nowrap;
+      font-size: 11px;
+      color: var(--text-sub);
+    }
+
+    .cards {
+      display: grid;
+      grid-template-columns: minmax(0,2fr) minmax(0,1.4fr);
+      gap: 16px;
+    }
+
+    .card {
+      background: var(--bg-elevated);
+      border-radius: var(--radius-lg);
+      padding: 14px 14px 16px;
+      box-shadow: var(--shadow-soft);
+      border: 1px solid rgba(15,23,42,0.03);
+    }
+
+    .card-title {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+
+    .card-sub {
+      font-size: 11px;
+      color: var(--text-sub);
+      margin-bottom: 10px;
+    }
+
+    .next-steps {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      font-size: 13px;
+    }
+
+    .next-steps li {
+      padding: 4px 0;
+      display: flex;
+      gap: 8px;
+      align-items: flex-start;
+    }
+
+    .next-steps li span.bullet {
+      margin-top: 4px;
+      font-size: 14px;
+      color: var(--accent);
+    }
+
+    .meta-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0,1fr));
+      gap: 8px 12px;
+      font-size: 12px;
+    }
+
+    .meta-key {
+      color: var(--text-sub);
+    }
+
+    .meta-val {
+      font-weight: 500;
+    }
+
+    .muted {
+      color: var(--text-sub);
+      font-size: 12px;
+    }
+
+    .error-box,
+    .empty-box {
+      max-width: 520px;
+      margin: 30px auto;
+      text-align: center;
+      padding: 18px 16px 22px;
+      border-radius: var(--radius-lg);
+      background: #fef2f2;
+      color: var(--danger);
+      border: 1px solid rgba(239,68,68,0.4);
+      box-shadow: var(--shadow-soft);
+    }
+
+    .error-box h2,
+    .empty-box h2 {
+      margin: 0 0 6px;
+      font-size: 15px;
+    }
+
+    .error-box p,
+    .empty-box p {
+      margin: 0;
+      font-size: 12px;
+      color: #991b1b;
+    }
+
+    .empty-box {
+      background: #eff6ff;
+      color: var(--text-main);
+      border-color: rgba(37,99,235,0.3);
+    }
+
+    .view-title {
+      font-size: 15px;
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+
+    .view-sub {
+      font-size: 12px;
+      color: var(--text-sub);
+      margin-bottom: 16px;
+    }
+
+    .placeholder-box {
+      border-radius: var(--radius-md);
+      border: 1px dashed var(--border-subtle);
+      padding: 14px;
+      font-size: 12px;
+      color: var(--text-sub);
+      background: rgba(248,250,252,0.9);
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      border-radius: 999px;
+      border: 1px solid var(--border-subtle);
+      padding: 2px 8px;
+      font-size: 11px;
+      background: #fff;
+    }
+
+    .badge strong {
+      font-weight: 600;
+    }
+
+    .loading {
+      font-size: 13px;
+      color: var(--text-sub);
+      padding: 20px;
+      text-align: center;
+    }
+
+    @media (max-width: 880px) {
+      .layout {
+        flex-direction: column;
+      }
+      .sidebar {
+        width: 100%;
+        flex-direction: row;
+        align-items: center;
+        overflow-x: auto;
+        padding: 10px 12px;
+        border-right: none;
+        border-bottom: 1px solid var(--border-subtle);
+      }
+      .sidebar-section-label {
+        display: none;
+      }
+      .nav-list {
+        flex-direction: row;
+        gap: 6px;
+      }
+      .nav-item {
+        white-space: nowrap;
+      }
+      .sidebar-footer {
+        display: none;
+      }
+      .main {
+        padding: 16px 14px 24px;
+      }
+      .cards {
+        grid-template-columns: minmax(0,1fr);
+      }
+    }
+  </style>
+</head>
+<body>
+<div class="app-shell">
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-mark"></div>
+      <div>
+        <div class="brand-title">Lesson Booking Assistant</div>
+        <div class="brand-sub">LBA 講師ポータル</div>
+      </div>
+    </div>
+    <div class="topbar-right">
+      <div id="top-tenant-pill" class="pill" style="display:none;">
+        <span class="pill-dot"></span>
+        <span id="top-tenant-text"></span>
+      </div>
+      <button id="btn-open-public" class="btn-outline" style="display:none;">
+        受講者用ページを開く
+      </button>
+    </div>
+  </header>
+
+  <div class="layout">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-section-label">メニュー</div>
+      <ul class="nav-list" id="nav-list">
+        <li class="nav-item active" data-view="dashboard">
+          <span class="icon">🏠</span>
+          <span>ダッシュボード</span>
+        </li>
+        <li class="nav-item" data-view="lessons">
+          <span class="icon">📘</span>
+          <span>レッスン</span>
+        </li>
+        <li class="nav-item" data-view="schedules">
+          <span class="icon">📅</span>
+          <span>スケジュール</span>
+        </li>
+        <li class="nav-item" data-view="reservations">
+          <span class="icon">🧾</span>
+          <span>予約管理</span>
+        </li>
+        <li class="nav-item" data-view="videos">
+          <span class="icon">🎬</span>
+          <span>動画共有</span>
+        </li>
+        <li class="nav-item" data-view="settings">
+          <span class="icon">⚙️</span>
+          <span>設定</span>
+        </li>
+      </ul>
+
+      <div class="sidebar-footer">
+        <small id="sidebar-tenant"></small>
+        <small id="sidebar-plan"></small>
+      </div>
+    </aside>
+
+    <!-- Main content -->
+    <main class="main">
+      <div id="main-root">
+        <div class="loading">テナント情報を読み込み中です…</div>
+      </div>
+    </main>
+  </div>
 </div>
 
-<script type="module">
-  async function init() {
-    const app = document.getElementById("app");
+<script>
+  const state = {
+    tenantId: null,
+    data: null,
+    currentView: "dashboard",
+  };
 
-    // URLからtenantId取得
-    const params = new URLSearchParams(location.search);
-    const tenantId = params.get("tenantId");
+  function formatStatusLabel(status) {
+    if (!status) return "状態: 不明";
+    if (status === "READY") return "状態: 準備完了 (READY)";
+    if (status === "ACTIVE") return "状態: 契約中 (ACTIVE)";
+    if (status === "TRIAL") return "状態: トライアル中 (TRIAL)";
+    if (status === "CANCELLED") return "状態: 契約終了 (CANCELLED)";
+    return "状態: " + status;
+  }
 
-    if (!tenantId) {
-      app.innerHTML = "<p>tenantId が指定されていません。</p>";
-      return;
-    }
+  function formatPlanLabel(plan) {
+    if (!plan) return "プラン: 不明";
+    const label =
+      plan.toLowerCase() === "simple" ? "Simple" :
+      plan.toLowerCase() === "standard" ? "Standard" :
+      plan;
+    return "プラン: " + label;
+  }
 
-    // lookup API に問い合わせ
-    const apiUrl = `https://lba-api.mahito-contact.workers.dev/lookup?tenantId=${tenantId}`;
-
-    let data;
-    try {
-      const res = await fetch(apiUrl);
-      data = await res.json();
-    } catch (e) {
-      app.innerHTML = "<p>サーバーに接続できません。</p>";
-      return;
-    }
-
-    // API結果がエラー
-    if (!data.ok) {
-      app.innerHTML = "<p>テナント情報が取得できません。</p>";
-      return;
-    }
-
-    // ステータスごとの画面切り替え
-    if (data.status === "CANCELLED") {
-      app.innerHTML = `<p>契約が終了しています。(${tenantId})</p>`;
-      return;
-    }
-
-    // READY / ACTIVE / TRIAL → メイン画面表示
-    app.innerHTML = `
-      <h2>LBA 講師管理ポータル</h2>
-      <p>テナントID: ${tenantId}</p>
-      <p>プラン: ${data.plan}</p>
-      <p>ステータス: ${data.status}</p>
-      <p>読み込み成功！ここにダッシュボードを実装していくよ。</p>
+  function renderError(title, message) {
+    const root = document.getElementById("main-root");
+    root.innerHTML = `
+      <div class="error-box">
+        <h2>${title}</h2>
+        <p>${message}</p>
+      </div>
     `;
   }
 
+  function renderCancelled(tenantId) {
+    const root = document.getElementById("main-root");
+    root.innerHTML = `
+      <div class="error-box">
+        <h2>契約が終了しています</h2>
+        <p>このテナント (<strong>${tenantId}</strong>) は <strong>CANCELLED</strong> 状態です。</p>
+        <p>ご不明な点があれば、運営者にお問い合わせください。</p>
+      </div>
+    `;
+  }
+
+  function renderDashboard() {
+    const root = document.getElementById("main-root");
+    const d = state.data || {};
+    const planText = formatPlanLabel(d.plan);
+    const statusText = formatStatusLabel(d.status);
+
+    root.innerHTML = `
+      <div>
+        <div class="status-banner">
+          <div class="left">
+            <strong>ようこそ、LBA 管理ポータルへ</strong>
+            <span>レッスン登録・スケジュール管理・予約管理・動画共有をここから行えます。</span>
+          </div>
+          <div class="right">
+            <div class="badge">
+              <strong>${planText.replace("プラン: ","")}</strong>
+              <span>|</span>
+              <span>${d.status || "UNKNOWN"}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="cards">
+          <section class="card">
+            <div class="card-title">次のステップ</div>
+            <div class="card-sub">まずはテンプレートスプレッドシートを確認し、レッスン・場所・講師を登録しましょう。</div>
+            <ul class="next-steps">
+              <li>
+                <span class="bullet">1.</span>
+                <div>
+                  <strong>Google スプレッドシートを開く</strong><br>
+                  <span class="muted">「LBA_TEACHER_${state.tenantId}」という名前のスプレッドシートが Drive に作成されています。</span>
+                </div>
+              </li>
+              <li>
+                <span class="bullet">2.</span>
+                <div>
+                  <strong>INSTRUCTORS / LOCATIONS / LESSONS シートを設定</strong><br>
+                  <span class="muted">講師・場所・レッスンの基本マスタを登録します。</span>
+                </div>
+              </li>
+              <li>
+                <span class="bullet">3.</span>
+                <div>
+                  <strong>SCHEDULES シートで実際の開催日を登録</strong><br>
+                  <span class="muted">ここで登録したスケジュールが、受講者用の予約ページに表示されます。</span>
+                </div>
+              </li>
+            </ul>
+          </section>
+
+          <section class="card">
+            <div class="card-title">契約情報</div>
+            <div class="card-sub">現在のテナント状態の概要です。</div>
+            <div class="meta-grid">
+              <div class="meta-key">テナントID</div>
+              <div class="meta-val">${state.tenantId}</div>
+
+              <div class="meta-key">プラン</div>
+              <div class="meta-val">${planText.replace("プラン: ","")}</div>
+
+              <div class="meta-key">状態</div>
+              <div class="meta-val">${d.status || "不明"}</div>
+
+              <div class="meta-key">受講者用URL</div>
+              <div class="meta-val">
+                ${d.publicBookingUrl
+                  ? `<a href="${d.publicBookingUrl}" target="_blank" rel="noopener">リンクを開く</a>`
+                  : "未設定"}
+              </div>
+
+              <div class="meta-key">講師ポータルURL</div>
+              <div class="meta-val">
+                ${d.portalUrl
+                  ? `<a href="${d.portalUrl}" target="_blank" rel="noopener">このページの共有リンク</a>`
+                  : "未設定"}
+              </div>
+
+              <div class="meta-key">メモ</div>
+              <div class="meta-val">Stripe / REGISTRY と連携して契約状態を自動管理します。</div>
+            </div>
+          </section>
+        </div>
+      </div>
+    `;
+  }
+
+  function renderPlaceholderView(viewName) {
+    const root = document.getElementById("main-root");
+    const labelMap = {
+      lessons: "レッスン",
+      schedules: "スケジュール",
+      reservations: "予約管理",
+      videos: "動画共有",
+      settings: "設定",
+    };
+    const title = labelMap[viewName] || viewName;
+
+    root.innerHTML = `
+      <section>
+        <div class="view-title">${title}</div>
+        <div class="view-sub">
+          このセクションはこれから実装していきます。まずはダッシュボードで全体の流れを確認してください。
+        </div>
+        <div class="placeholder-box">
+          ${viewName === "lessons" ? `
+            ・LESSONS シートのレコードを一覧表示し、ここから編集できるようにする予定です。<br>
+            ・「レッスン追加」ボタンでテンプレート行を生成し、シートに書き込む設計も可能です。
+          ` : ""}
+          ${viewName === "schedules" ? `
+            ・SCHEDULES シートと連携し、週表示・月表示で予定を確認できるUIを想定しています。<br>
+            ・クリックで詳細ポップアップや、手動予約追加フローにつなげることができます。
+          ` : ""}
+          ${viewName === "reservations" ? `
+            ・RESERVATIONS シートと連動し、日付やレッスン単位で予約一覧を表示します。<br>
+            ・ステータス変更（仮予約→本予約、キャンセル）や、手動追加をここから行えるようにします。
+          ` : ""}
+          ${viewName === "videos" ? `
+            ・VIDEOS シート連携で、レッスンごとの動画共有リンク・期限・ステータスを管理します。<br>
+            ・期限切れ自動削除や、受講者への一斉送信機能をここにまとめる想定です。
+          ` : ""}
+          ${viewName === "settings" ? `
+            ・SETTINGS シートの各種設定（動画保存期間、メッセージ送信可否など）をUIから変更できるようにする予定です。<br>
+            ・テナントプランやタイムゾーンの確認もここで行えます。
+          ` : ""}
+        </div>
+      </section>
+    `;
+  }
+
+  function setActiveNav(view) {
+    const items = document.querySelectorAll(".nav-item");
+    items.forEach((el) => {
+      if (el.dataset.view === view) {
+        el.classList.add("active");
+      } else {
+        el.classList.remove("active");
+      }
+    });
+  }
+
+  function renderView(view) {
+    state.currentView = view;
+    setActiveNav(view);
+
+    if (!state.data) {
+      const root = document.getElementById("main-root");
+      root.innerHTML = '<div class="loading">テナント情報を読み込み中です…</div>';
+      return;
+    }
+
+    if (view === "dashboard") {
+      renderDashboard();
+    } else {
+      renderPlaceholderView(view);
+    }
+  }
+
+  async function init() {
+    const params = new URLSearchParams(location.search);
+    const tenantId = params.get("tenantId");
+
+    const root = document.getElementById("main-root");
+    const pill = document.getElementById("top-tenant-pill");
+    const pillText = document.getElementById("top-tenant-text");
+    const btnPublic = document.getElementById("btn-open-public");
+    const sidebarTenant = document.getElementById("sidebar-tenant");
+    const sidebarPlan = document.getElementById("sidebar-plan");
+
+    if (!tenantId) {
+      renderError("tenantId が指定されていません",
+        "URL に ?tenantId=XXXX の形式でテナントIDを付けてアクセスしてください。");
+      return;
+    }
+
+    state.tenantId = tenantId;
+    root.innerHTML = '<div class="loading">テナント情報を読み込み中です…</div>';
+
+    const apiUrl = `https://lba-api.mahito-contact.workers.dev/lookup?tenantId=${encodeURIComponent(tenantId)}`;
+
+    let data;
+    try {
+      const res = await fetch(apiUrl, { method: "GET" });
+      data = await res.json();
+    } catch (err) {
+      console.error(err);
+      renderError("サーバーに接続できません",
+        "時間をおいて再度アクセスしてください。");
+      return;
+    }
+
+    if (!data || !data.ok) {
+      renderError("テナントが見つかりません",
+        `テナントID「${tenantId}」は REGISTRY に登録されていないか、参照できません。`);
+      return;
+    }
+
+    // CANCELLED は専用画面
+    if (data.status === "CANCELLED") {
+      state.data = data;
+      pill.style.display = "inline-flex";
+      pill.classList.add("pill-danger");
+      pillText.textContent = `${tenantId} / CANCELLED`;
+      sidebarTenant.textContent = `Tenant: ${tenantId}`;
+      sidebarPlan.textContent = formatPlanLabel(data.plan);
+      renderCancelled(tenantId);
+      return;
+    }
+
+    // READY / ACTIVE / TRIAL → 通常画面
+    state.data = data;
+
+    // Top bar
+    pill.style.display = "inline-flex";
+    pillText.textContent = `${tenantId} / ${data.status || "UNKNOWN"}`;
+
+    // 受講者用ページボタン
+    if (data.publicBookingUrl) {
+      btnPublic.style.display = "inline-block";
+      btnPublic.onclick = () => {
+        window.open(data.publicBookingUrl, "_blank", "noopener");
+      };
+    }
+
+    // Sidebar footer
+    sidebarTenant.textContent = `Tenant: ${tenantId}`;
+    sidebarPlan.textContent = formatPlanLabel(data.plan);
+
+    // 初期表示
+    renderView("dashboard");
+  }
+
+  // ナビゲーションのイベント
+  document.addEventListener("click", (e) => {
+    const item = e.target.closest(".nav-item");
+    if (!item) return;
+    const view = item.dataset.view;
+    if (!view) return;
+    renderView(view);
+  });
+
   init();
 </script>
+
+</body>
+</html>
