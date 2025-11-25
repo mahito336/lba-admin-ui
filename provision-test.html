@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>Provision Test</title>
+</head>
+<body>
+<h2>Provision API Test</h2>
+
+<label>Tenant ID:</label>
+<input id="tenantId" value="T381727" style="width:200px;"><br><br>
+
+<label>Owner Email:</label>
+<input id="ownerEmail" value="htm3r@live.jp" style="width:200px;"><br><br>
+
+<button onclick="sendProvision()">Provision 実行</button>
+
+<pre id="result" style="margin-top:20px; padding:10px; background:#eee;"></pre>
+
+<script>
+async function sendProvision() {
+  const tenantId = document.getElementById("tenantId").value;
+  const ownerEmail = document.getElementById("ownerEmail").value;
+
+  const payload = {
+    mode: "provision",
+    tenantId,
+    ownerEmail
+  };
+
+  const res = await fetch(
+    "https://script.google.com/macros/s/AKfycbxYj547FMAl5qcWTU-DKJlrv2g6Q1MNBtgccmH7A9xli6ifZ2k4mUZO7ZXSGhHYF3a04A/exec",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    }
+  );
+
+  const text = await res.text();
+  document.getElementById("result").textContent = text;
+}
+</script>
+
+</body>
+</html>
