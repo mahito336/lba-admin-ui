@@ -1,88 +1,102 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8">
-  <title>LBA 環境構築</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta charset="UTF-8">
+<title>LBA 環境構築</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
 
-  <!-- Google Identity Services -->
-  <script src="https://accounts.google.com/gsi/client" async defer></script>
+<!-- Google Identity Services -->
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 
-  <style>
-    body { font-family: system-ui; padding: 20px; }
-    .card { padding: 16px; border: 1px solid #ccc; border-radius: 10px; margin-bottom: 20px; }
-    button { padding: 10px 16px; font-size: 16px; }
-  </style>
+<style>
+  body { font-family: system-ui; padding: 20px; }
+  .card { padding: 16px; border: 1px solid #ddd; border-radius: 10px; margin-bottom: 20px; }
+  button { padding: 10px 16px; font-size: 16px; cursor: pointer; }
+  .disabled { opacity: 0.5; pointer-events: none; }
+</style>
 </head>
+
 <body>
 <h2>📦 LBA 環境構築</h2>
 
-<div class="card">
-  <h3>STEP 0：Google アカウント確認</h3>
-  <p>現在ログイン中の Google アカウント：</p>
-  <p id="currentAccount">（確認中...）</p>
+<p>
+レッスン管理環境を作成するには、<br>
+<strong>Google アカウントへのアクセス許可</strong> が必要です。
+</p>
 
-  <p style="color:#555;">
-    ※もし別のアカウントで構築したい場合：<br>
-    ① ブラウザ右上のアカウント切替から一度ログアウト<br>
-    ② このページをリロードしてください
+<div class="card">
+  <h3>STEP 1：Google アカウントで承認</h3>
+
+  <p>
+    これから <strong>LBA の環境（スプレッドシート）を作成する Google アカウント</strong> を選んでください。  
+    必ず「講師が普段利用している Google アカウント」を選択してください。
   </p>
-</div>
 
-<div class="card">
-  <h3>STEP 1：このアカウントで開始</h3>
-  <p>Google Drive へのアクセス許可が必要です。</p>
-
-  <button id="authorizeBtn">Google アカウントで承認する</button>
+  <button id="authorizeBtn">Google アカウントを選択する</button>
 
   <pre id="authInfo" style="background:#eee; padding:10px; margin-top:15px;"></pre>
 </div>
 
 <div class="card">
-  <h3>STEP 2：環境構築の実行</h3>
-  <button id="provisionBtn" disabled>環境を構築する</button>
+  <h3>STEP 2：環境構築を実行</h3>
+
+  <p>
+    下のボタンを押すと、あなたの Google Drive 上に<br>
+    <strong>LBA 用のスプレッドシート</strong> が自動生成されます。
+  </p>
+
+  <button id="provisionBtn" class="disabled">環境を構築する</button>
 
   <pre id="result" style="background:#eee; padding:10px; margin-top:15px;"></pre>
 </div>
 
 <script>
-/* ===== グローバル変数 ===== */
-let googleAccessToken = null;
-let ownerEmail = null;
+/* ================================
+   設定
+================================ */
 const tenantId = new URL(location.href).searchParams.get("tenantId");
-
-/* ===== STEP 0: ログイン中アカウント表示 ===== */
-function detectLoggedInAccount() {
-  // Google の JS API で "ログインしているGoogleアカウント" を推定
-  google.accounts.id.initialize({
-    client_id: "YOUR_GOOGLE_CLIENT_ID",
-    callback: (response) => {
-      const payload = JSON.parse(atob(response.credential.split('.')[1]));
-      ownerEmail = payload.email;
-      document.getElementById("currentAccount").textContent = ownerEmail;
-    }
-  });
-
-  google.accounts.id.prompt(); // ログイン状況を読み取る
+if (!tenantId) {
+  document.body.innerHTML = "<h3>❌ tenantId が URL に含まれていません</h3>";
 }
 
-/* ===== STEP 1: OAuth 承認 ===== */
-document.getElementById("authorizeBtn").onclick = async () => {
+let googleAccessToken = null;
+let ownerEmail = null;
+
+/* ================================
+   STEP1：OAuth 認証
+================================ */
+document.getElementById("authorizeBtn").onclick = () => {
   const tokenClient = google.accounts.oauth2.initTokenClient({
-    client_id: "YOUR_GOOGLE_CLIENT_ID",
+    client_id: "YOUR_GOOGLE_CLIENT_ID",  // ← ここだけ差し替える
     scope: "https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/script.projects",
     callback: (token) => {
       googleAccessToken = token.access_token;
-      document.getElementById("authInfo").textContent =
-        "Google Drive / Apps Script の承認が完了しました。";
-      document.getElementById("provisionBtn").disabled = false;
+
+      // アクセストークンから email を取得
+      fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
+        headers: { Authorization: "Bearer " + googleAccessToken }
+      })
+      .then(res => res.json())
+      .then(user => {
+        ownerEmail = user.email;
+
+        document.getElementById("authInfo").textContent =
+          "✔ 承認完了：このアカウントで環境を作成します → " + ownerEmail;
+
+        document.getElementById("provisionBtn").classList.remove("disabled");
+      })
+      .catch(err => {
+        document.getElementById("authInfo").textContent = "❌ Email 取得エラー: " + err;
+      });
     }
   });
 
   tokenClient.requestAccessToken();
 };
 
-/* ===== STEP 2: Worker に Provision を依頼 ===== */
+/* ================================
+   STEP2：Worker に Provision を依頼
+================================ */
 document.getElementById("provisionBtn").onclick = async () => {
   const payload = {
     tenantId,
@@ -100,8 +114,6 @@ document.getElementById("provisionBtn").onclick = async () => {
   document.getElementById("result").textContent = txt;
 };
 
-/* 起動時 */
-detectLoggedInAccount();
 </script>
 
 </body>
