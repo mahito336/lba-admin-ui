@@ -1,145 +1,218 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8" />
-  <title>LBA 環境構築</title>
-  <script src="https://accounts.google.com/gsi/client" async defer></script>
-  <style>
-    body {
-      font-family: system-ui, sans-serif;
-      background: #f5f5f5;
-      padding: 20px;
-    }
-    .card {
-      max-width: 480px;
-      margin: 40px auto;
-      background: white;
-      padding: 24px;
-      border-radius: 14px;
-      box-shadow: 0 3px 14px rgba(0,0,0,0.1);
-    }
-    .title {
-      font-size: 20px;
-      margin-bottom: 12px;
-      font-weight: 600;
-    }
-    .msg {
-      margin-top: 18px;
-      padding: 12px;
-      background: #eef;
-      border-radius: 8px;
-      word-break: break-all;
-    }
-    .btn {
-      padding: 10px 18px;
-      font-size: 15px;
-      border-radius: 8px;
-      border: none;
-      cursor: pointer;
-    }
-    .btn-primary {
-      background: #0066ff;
-      color: white;
-    }
-    .hidden {
-      display: none;
-    }
-  </style>
-</head>
+<meta charset="UTF-8">
+<title>LBA｜環境構築（Setup）</title>
 
+<!-- ブランドカラー & スタイル -->
+<style>
+  :root {
+    --primary: #1D3E8A;
+    --primary-dark: #162F66;
+    --primary-light: #E9ECF7;
+    --accent: #4A6EE0;
+    --accent-light: #EAF0FF;
+    --text-main: #111;
+    --text-sub: #555;
+    --border: #E0E0E0;
+    --bg: #FAFAFA;
+  }
+
+  body {
+    font-family: system-ui, sans-serif;
+    background: var(--bg);
+    margin: 0;
+    padding: 24px;
+    color: var(--text-main);
+  }
+
+  h1 {
+    color: var(--primary);
+    margin-bottom: 8px;
+  }
+
+  .card {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 20px;
+    max-width: 520px;
+    margin: 0 auto 20px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+  }
+
+  .btn {
+    background: var(--primary);
+    color: white;
+    border: none;
+    padding: 12px 18px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 15px;
+    margin-top: 12px;
+  }
+  .btn:hover {
+    background: var(--primary-dark);
+  }
+
+  .info {
+    background: var(--primary-light);
+    padding: 12px;
+    border-left: 4px solid var(--primary);
+    border-radius: 6px;
+    margin: 12px 0;
+  }
+
+  .error {
+    background: #ffe5e5;
+    border-left: 4px solid #cc0000;
+    padding: 12px;
+    color: #660000;
+    border-radius: 6px;
+    margin-top: 10px;
+  }
+
+  .success {
+    background: #e8f4e8;
+    border-left: 4px solid #229922;
+    padding: 12px;
+    color: #0a550a;
+    border-radius: 6px;
+    margin-top: 10px;
+  }
+
+  code {
+    background: #f7f7f7;
+    padding: 3px 5px;
+    border-radius: 4px;
+  }
+</style>
+
+<!-- Google Identity Services -->
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+
+</head>
 <body>
 
+<h1>環境構築（Setup）</h1>
+<p style="color:var(--text-sub);margin-bottom:20px;">
+  レッスン管理システム LBA の環境を、あなたの Google アカウントで作成します。
+</p>
+
+
+<!-- STEP 1：講師アカウントの選択 -->
 <div class="card">
-  <div class="title">LBA 環境構築</div>
+  <h2 style="margin-top:0;">STEP1：Google アカウントを選択</h2>
 
-  <p>まず、環境を構築する Google アカウントでログインしてください。</p>
-
-  <!-- ▼ Google Identity Services ログインボタン ▼ -->
   <div id="g_id_onload"
        data-client_id="745988638249-a91qhekn7c15b3oifaolqnc0fmrghi8p.apps.googleusercontent.com"
-       data-context="signin"
-       data-callback="handleCredentialResponse"
-       data-auto_prompt="false">
+       data-context="signup"
+       data-ux_mode="popup"
+       data-callback="onCredentialResponse">
   </div>
 
   <div class="g_id_signin"
        data-type="standard"
        data-size="large"
-       data-width="280">
+       data-theme="outline"
+       data-text="続行する">
   </div>
-  <!-- ▲ Google Identity Services ログインボタン ▲ -->
 
-  <div id="step2" class="hidden">
-    <div class="msg" id="accountInfo"></div>
-
-    <p style="margin-top:16px;">このアカウントで環境を作成しますか？</p>
-
-    <button class="btn btn-primary" onclick="startProvision()">環境を作成する</button>
-
-    <div class="msg hidden" id="provResult"></div>
-  </div>
+  <div id="accountInfo" style="margin-top:15px;"></div>
 </div>
 
+
+<!-- STEP 2：環境構築の実行 -->
+<div class="card">
+  <h2 style="margin-top:0;">STEP2：環境構築の実行</h2>
+
+  <div class="info">
+    選択したアカウントで、LBA の講師用スプレッドシートを自動で作成します。  
+    右の条件に合致するアカウントで実行してください。
+    <ul style="margin:6px 0 0 18px;">
+      <li>LBA を運営する Google アカウント</li>
+      <li>Drive が利用可能で、編集権限があるアカウント</li>
+    </ul>
+  </div>
+
+  <label>Tenant ID</label><br>
+  <input id="tenantId" placeholder="T123456" style="padding:8px;width:240px;border:1px solid var(--border);border-radius:6px;"><br><br>
+
+  <button class="btn" onclick="runProvision()">環境構築を実行する</button>
+
+  <div id="provisionResult"></div>
+</div>
+
+
 <script>
-/* -------------------------------------------------------------
-   JWT デコード（Google ID Token → email, name を取り出す）
-------------------------------------------------------------- */
-function parseJwt(token) {
-  return JSON.parse(atob(token.split('.')[1]));
+/* =====================================================
+   STEP1：Google アカウントの OAuth (ID 取得)
+===================================================== */
+
+let selectedAccountEmail = null;
+
+function onCredentialResponse(response) {
+  // Google ID Token をデコード（簡易版）
+  const payload = JSON.parse(atob(response.credential.split('.')[1]));
+  selectedAccountEmail = payload.email;
+
+  document.getElementById("accountInfo").innerHTML =
+    `<div class="success">✔ 承認済み： <b>${selectedAccountEmail}</b> で環境を作成します。</div>`;
 }
 
-/* -------------------------------------------------------------
-   Google ログイン完了 → email を取得
-------------------------------------------------------------- */
-let ACCOUNT_EMAIL = null;
 
-function handleCredentialResponse(response) {
-  const data = parseJwt(response.credential);
+/* =====================================================
+   STEP2：環境構築の実行
+===================================================== */
+async function runProvision() {
 
-  ACCOUNT_EMAIL = data.email;
-  const name = data.name;
-
-  document.getElementById("accountInfo").textContent =
-    `ログイン中のアカウント： ${name}（${ACCOUNT_EMAIL}）`;
-
-  document.getElementById("step2").classList.remove("hidden");
-}
-
-/* -------------------------------------------------------------
-   STEP 2：環境構築 API を呼び出す
-   - tenantId は URL の ?tenantId=xxxx から取得
-------------------------------------------------------------- */
-async function startProvision() {
-  const tenantId = new URL(location.href).searchParams.get("tenantId");
+  const tenantId = document.getElementById("tenantId").value;
 
   if (!tenantId) {
-    alert("tenantId が URL に含まれていません。");
+    document.getElementById("provisionResult").innerHTML =
+      `<div class="error">Tenant ID を入力してください。</div>`;
     return;
   }
-  if (!ACCOUNT_EMAIL) {
-    alert("Google アカウントが取得できていません。");
+  if (!selectedAccountEmail) {
+    document.getElementById("provisionResult").innerHTML =
+      `<div class="error">先に Google アカウントを選択してください。</div>`;
     return;
   }
 
-  const payload = {
-    mode: "provision",
-    tenantId,
-    ownerEmail: ACCOUNT_EMAIL
-  };
+  document.getElementById("provisionResult").innerHTML =
+    `<div class="info">環境構築中です…（20～40秒ほどかかることがあります）</div>`;
 
-  const apiUrl = "https://lba-api.mahito-contact.workers.dev/provision";
-
-  const res = await fetch(apiUrl, {
+  // Cloudflare Worker の provision API を叩く
+  const res = await fetch("https://lba-api.mahito-contact.workers.dev/provision", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload)
+    body: JSON.stringify({
+      mode: "provision",
+      tenantId,
+      ownerEmail: selectedAccountEmail,
+    }),
   });
 
-  const txt = await res.text();
-  const out = document.getElementById("provResult");
-
-  out.classList.remove("hidden");
-  out.textContent = txt;
+  const text = await res.text();
+  try {
+    const json = JSON.parse(text);
+    if (json.ok) {
+      document.getElementById("provisionResult").innerHTML =
+        `<div class="success">
+           ✔ 環境構築が完了しました！<br><br>
+           <b>講師ポータル：</b><br>
+           <a href="${json.gasResponse.portalUrl}" target="_blank">${json.gasResponse.portalUrl}</a><br><br>
+           <b>生徒予約ページ：</b><br>
+           <a href="${json.gasResponse.publicBookingUrl}" target="_blank">${json.gasResponse.publicBookingUrl}</a>
+         </div>`;
+    } else {
+      document.getElementById("provisionResult").innerHTML =
+        `<div class="error">エラー：${json.error || text}</div>`;
+    }
+  } catch (e) {
+    document.getElementById("provisionResult").innerHTML =
+      `<div class="error">不明なレスポンス：${text}</div>`;
+  }
 }
 </script>
 
