@@ -67,7 +67,7 @@ let ownerEmail = null;
 ================================ */
 document.getElementById("authorizeBtn").onclick = () => {
   const tokenClient = google.accounts.oauth2.initTokenClient({
-    client_id: "YOUR_GOOGLE_CLIENT_ID",  // ← ここだけ差し替える
+    client_id: "745988638249-a91qhekn7c15b3oifaolqnc0fmrghi8p.apps.googleusercontent.com",  // ← ここだけ差し替える
     scope: "https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/script.projects",
     callback: (token) => {
       googleAccessToken = token.access_token;
