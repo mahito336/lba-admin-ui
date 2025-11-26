@@ -2,193 +2,140 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1">
-
 <title>LBA 環境構築</title>
 
-<!-- ブランドカラー -->
-<style>
-  :root {
-    --brand: #1A73E8; /* Mahito Blue */
-    --bg: #f8fafc;
-  }
-  body {
-    margin:0; padding:20px; background:var(--bg);
-    font-family: system-ui, sans-serif;
-  }
-  .container {
-    max-width:480px; margin:0 auto; background:white;
-    padding:24px; border-radius:12px;
-    box-shadow:0 2px 10px rgba(0,0,0,0.08);
-  }
-  h2 {
-    margin:0 0 16px; font-size:22px; color:#111;
-  }
-  .step {
-    margin-bottom:24px;
-  }
-  .btn {
-    padding:12px 18px; width:100%;
-    background:var(--brand); color:white;
-    border:none; border-radius:8px; font-size:16px;
-    cursor:pointer;
-  }
-  .btn:disabled {
-    background:#b7c7e1; cursor:not-allowed;
-  }
-  .small {
-    font-size:13px; color:#555;
-  }
-  .info-box {
-    background:#eef5ff; padding:10px;
-    border-radius:8px; margin-top:8px;
-    font-size:14px; color:#333;
-  }
-  #result {
-    white-space:pre-wrap;
-    background:#eee; padding:12px;
-    border-radius:8px;
-    margin-top:16px;
-    font-size:13px;
-  }
-  #tenantId {
-    width:100%; padding:10px; margin:8px 0 0;
-    border:1px solid #ddd; border-radius:6px;
-    font-size:15px;
-  }
-</style>
+<script>
+// -------------------------------
+//  OAuth 設定
+// -------------------------------
+const CLIENT_ID =
+  "990347544512-tu7i4t6cg65t4ihdtkbqo00gobtuvas0.apps.googleusercontent.com";
 
-<!-- Google Identity Services -->
-<script src="https://accounts.google.com/gsi/client" async defer></script>
+const SCOPES = [
+  "openid",
+  "https://www.googleapis.com/auth/userinfo.email",
+  "https://www.googleapis.com/auth/userinfo.profile",
+  "https://www.googleapis.com/auth/drive.file",
+  "https://www.googleapis.com/auth/script.projects",
+  "https://www.googleapis.com/auth/script.deployments",
+].join(" ");
+
+let ACCESS_TOKEN = null;
+let USER_EMAIL = null;
+let COPIED_FILE_ID = null;
+
+// -------------------------------
+// Google OAuth → トークン取得
+// -------------------------------
+async function authenticate() {
+  const url =
+    "https://accounts.google.com/o/oauth2/v2/auth?" +
+    new URLSearchParams({
+      client_id: CLIENT_ID,
+      redirect_uri: window.location.origin + window.location.pathname,
+      response_type: "token",
+      scope: SCOPES,
+      include_granted_scopes: "true",
+      prompt: "consent",
+    });
+
+  window.location.href = url;
+}
+
+// -------------------------------
+// ページ読み込み時 → URLからアクセストークン取得
+// -------------------------------
+window.onload = async () => {
+  if (window.location.hash.includes("access_token")) {
+    const params = new URLSearchParams(window.location.hash.substring(1));
+    ACCESS_TOKEN = params.get("access_token");
+
+    document.getElementById("step-auth").style.display = "none";
+    document.getElementById("step-info").style.display = "block";
+
+    await fetchUserInfo();
+  }
+};
+
+// -------------------------------
+// ユーザー情報取得
+// -------------------------------
+async function fetchUserInfo() {
+  const res = await fetch("https://www.googleapis.com/oauth2/v2/userinfo", {
+    headers: { Authorization: "Bearer " + ACCESS_TOKEN },
+  });
+  const data = await res.json();
+
+  USER_EMAIL = data.email;
+  document.getElementById("user-email").textContent = USER_EMAIL;
+}
+
+// -------------------------------
+// STEP2: テンプレートを講師Driveにコピー
+// -------------------------------
+async function copyTemplate() {
+  const templateFileId = "1Ff8cgHw_Y9rbjue0sIO8xIWwmMY5rPHAUWoFigXW6nE"; // テンプレID固定
+  const copyName = "LBA_TEACHER_SPREADSHEET";
+
+  const res = await fetch(
+    `https://www.googleapis.com/drive/v3/files/${templateFileId}/copy`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: "Bearer " + ACCESS_TOKEN,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ name: copyName }),
+    }
+  );
+
+  const data = await res.json();
+  COPIED_FILE_ID = data.id;
+
+  document.getElementById("copied-file-id").textContent = COPIED_FILE_ID;
+  document.getElementById("step-copy").style.display = "none";
+  document.getElementById("step-script").style.display = "block";
+}
+</script>
+
+<style>
+body { font-family: system-ui; margin: 20px; }
+.step { padding: 16px; margin-bottom: 20px; background: #f0f7ff; border-radius: 10px; }
+</style>
 
 </head>
 <body>
 
-<div class="container">
+<h2>LBA 環境構築（正式版）</h2>
 
-  <h2>LBA 環境構築</h2>
-
-  <!-- Step 1 -->
-  <div class="step">
-    <b>STEP1：Google アカウントを選択</b>
-    <div class="small">このアカウントの Drive 上に LBA 環境（スプレッドシート等）が作成されます。</div>
-
-    <div id="g_id_onload"
-         data-client_id="990347544512-tu7i4t6cg65t4ihdtkbqo00gobtuvas0.apps.googleusercontent.com"
-         data-context="signup"
-         data-ux_mode="popup"
-         data-auto_select="false"
-         data-callback="onCredentialResponse"
-         data-itp_support="true">
-    </div>
-
-    <div class="g_id_signin"
-         data-type="standard"
-         data-shape="rectangular"
-         data-theme="outline"
-         data-text="signin_with"
-         data-size="large"
-         data-logo_alignment="left">
-    </div>
-
-    <div id="selectedAccount" class="info-box" style="display:none;"></div>
-  </div>
-
-  <!-- Step 2 -->
-  <div class="step">
-    <b>STEP2：テナントIDの確認</b>
-    <div class="small">契約時に発行されたテナントIDが自動入力されます。</div>
-    <input id="tenantId" readonly />
-  </div>
-
-  <!-- Step 3 -->
-  <div class="step">
-    <b>STEP3：環境を構築</b>
-    <div class="small">以下のボタンを押すと、スプレッドシートが自動作成され、講師用 / 生徒用ポータルが有効になります。</div>
-    <button id="btnProvision" class="btn" disabled onclick="runProvision()">環境を構築する</button>
-  </div>
-
-  <pre id="result"></pre>
-
+<!-- STEP 1: OAuth -->
+<div class="step" id="step-auth">
+  <h3>STEP1：Googleアカウントにログイン</h3>
+  <button onclick="authenticate()">Googleアカウントを選択する</button>
 </div>
 
-<script>
-// -----------------------------------------
-// 0) URL から tenantId を取得
-// -----------------------------------------
-function loadTenantId() {
-  const params = new URLSearchParams(location.search);
-  const tid = params.get("tenantId");
-  const input = document.getElementById("tenantId");
-  if (tid) {
-    input.value = tid;
-  } else {
-    input.value = "※ URL に tenantId がありません";
-  }
-}
-loadTenantId();
+<!-- STEP 2: User Info -->
+<div class="step" id="step-info" style="display:none">
+  <h3>STEP2：ログイン確認</h3>
+  <p>ログイン中のアカウント：</p>
+  <p style="font-weight:bold" id="user-email">確認中...</p>
+  <button onclick="document.getElementById('step-copy').style.display='block'">
+    次へ進む
+  </button>
+</div>
 
-// -----------------------------------------
-// 1) Google Identity：アカウント選択
-// -----------------------------------------
-google.accounts.id.disableAutoSelect();
+<!-- STEP 3: Copy Template -->
+<div class="step" id="step-copy" style="display:none">
+  <h3>STEP3：LBA テンプレートをコピーする</h3>
+  <button onclick="copyTemplate()">スプレッドシートをコピー</button>
+  <p>コピーされた FileID：<span id="copied-file-id">未コピー</span></p>
+</div>
 
-function parseJwt(token) {
-  const base64Url = token.split('.')[1];
-  const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-  const json = decodeURIComponent(
-    atob(base64).split('').map(c => '%' + ('00'+c.charCodeAt(0).toString(16)).slice(-2)).join('')
-  );
-  return JSON.parse(json);
-}
-
-let selectedEmail = null;
-
-function onCredentialResponse(response) {
-  const data = parseJwt(response.credential);
-  selectedEmail = data.email;
-
-  document.getElementById("selectedAccount").style.display = "block";
-  document.getElementById("selectedAccount").innerHTML =
-    `<b>使用する Google アカウント：</b><br>${selectedEmail}`;
-
-  document.getElementById("btnProvision").disabled = false;
-}
-
-// -----------------------------------------
-// 2) Provision 呼び出し
-// -----------------------------------------
-async function runProvision() {
-  const tid = document.getElementById("tenantId").value;
-
-  if (!selectedEmail) {
-    alert("STEP1：Google アカウントを選択してください。");
-    return;
-  }
-  if (!tid || tid.startsWith("※")) {
-    alert("STEP2：tenantId が正しく取得できません。URL を確認してください。");
-    return;
-  }
-
-  const payload = {
-    tenantId: tid,
-    ownerEmail: selectedEmail,
-  };
-
-  const resultBox = document.getElementById("result");
-  resultBox.textContent = "実行中...\n";
-
-  const res = await fetch("https://lba-api.mahito-contact.workers.dev/provision", {
-    method: "POST",
-    headers: {"Content-Type":"application/json"},
-    body: JSON.stringify(payload)
-  });
-
-  const text = await res.text();
-  resultBox.textContent = text;
-}
-
-</script>
+<!-- STEP 4: GAS（後で作成） -->
+<div class="step" id="step-script" style="display:none">
+  <h3>STEP4：GAS プロジェクトを構築する</h3>
+  <p>※まだ実装中：次回 GAS 自動生成を追加します。</p>
+</div>
 
 </body>
 </html>
