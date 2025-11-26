@@ -1,125 +1,107 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Lesson Booking Assistant - セットアップ</title>
+  <meta charset="UTF-8">
+  <title>LBA 環境構築</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
 
-<style>
-  body { font-family: system-ui, sans-serif; margin: 0; padding: 0; background: #f6f7f9; }
-  .wrap { max-width: 480px; margin: 0 auto; padding: 24px; }
-  h1 { font-size: 22px; margin: 0 0 16px; color: #333; text-align: center; }
-  .box {
-    background: #fff; padding: 20px; border-radius: 12px;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.05); margin-bottom: 20px;
-  }
-  button {
-    width: 100%; padding: 14px; border: none; border-radius: 8px;
-    font-size: 16px; font-weight: bold; background: #2563eb;
-    color: white; cursor: pointer;
-  }
-  button:disabled { opacity: 0.6; }
-  .loading { text-align: center; margin-top: 12px; font-size: 14px; color: #555; }
-  .result-link a {
-    display: block; margin: 8px 0; padding: 12px; border-radius: 8px;
-    background: #eef2ff; text-decoration: none; color: #1e3a8a;
-    text-align: center; font-size: 15px;
-  }
-</style>
+  <!-- Google Identity Services -->
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+
+  <style>
+    body { font-family: system-ui; padding: 20px; }
+    .card { padding: 16px; border: 1px solid #ccc; border-radius: 10px; margin-bottom: 20px; }
+    button { padding: 10px 16px; font-size: 16px; }
+  </style>
 </head>
-
 <body>
-<div class="wrap">
+<h2>📦 LBA 環境構築</h2>
 
-  <!-- STEP 0 -->
-  <div class="box">
-    <h1>環境セットアップ</h1>
-    <p>
-      これから Lesson Booking Assistant の環境構築を行います。<br><br>
-      ※ このセットアップには <b>Google アカウント</b> が必要です。<br>
-      ※ Stripe 決済時のメールアドレスと異なる Google アカウントでも問題ありません。<br>
-      ※ これから作成されるスプレッドシートは、いまログイン中の Google アカウントに紐づきます。
-    </p>
-  </div>
+<div class="card">
+  <h3>STEP 0：Google アカウント確認</h3>
+  <p>現在ログイン中の Google アカウント：</p>
+  <p id="currentAccount">（確認中...）</p>
 
-  <!-- STEP 1 -->
-  <div class="box">
-    <h3>① Google アカウントを確認</h3>
-    <p>現在ログイン中の Google アカウント：</p>
-    <p id="googleEmail" style="font-weight:bold; font-size:16px">取得中...</p>
+  <p style="color:#555;">
+    ※もし別のアカウントで構築したい場合：<br>
+    ① ブラウザ右上のアカウント切替から一度ログアウト<br>
+    ② このページをリロードしてください
+  </p>
+</div>
 
-    <p style="margin-top:10px; font-size:14px; color:#666;">
-      ※ 別の Google アカウントでセットアップする場合：<br>
-      <a href="https://accounts.google.com/Logout" target="_blank">Google からログアウト</a> → このページを再読み込みしてください。
-    </p>
-  </div>
+<div class="card">
+  <h3>STEP 1：このアカウントで開始</h3>
+  <p>Google Drive へのアクセス許可が必要です。</p>
 
-  <!-- STEP 2 -->
-  <div class="box">
-    <h3>② 環境構築</h3>
-    <p>下のボタンを押すと、講師用スプレッドシートが作成されます。</p>
-    <button id="btnSetup" onclick="startProvision()">環境を構築する</button>
-    <div id="loading" class="loading" style="display:none;">構築中です… 数秒お待ちください</div>
-  </div>
+  <button id="authorizeBtn">Google アカウントで承認する</button>
 
-  <!-- STEP 3 -->
-  <div id="result" class="box" style="display:none;">
-    <h3>③ 完了しました 🎉</h3>
-    <p>以下のリンクから管理を開始できます。</p>
-    <div id="links" class="result-link"></div>
-  </div>
+  <pre id="authInfo" style="background:#eee; padding:10px; margin-top:15px;"></pre>
+</div>
 
+<div class="card">
+  <h3>STEP 2：環境構築の実行</h3>
+  <button id="provisionBtn" disabled>環境を構築する</button>
+
+  <pre id="result" style="background:#eee; padding:10px; margin-top:15px;"></pre>
 </div>
 
 <script>
+/* ===== グローバル変数 ===== */
+let googleAccessToken = null;
+let ownerEmail = null;
 const tenantId = new URL(location.href).searchParams.get("tenantId");
 
-// Google アカウント取得
-async function fetchGoogleAccount() {
-  const url = "https://script.google.com/macros/s/___TEACHER_GAS_DEPLOY___/exec?mode=authCheck";
-  const res = await fetch(url);
-  const j = await res.json();
-  document.getElementById("googleEmail").textContent = j.email || "(取得できませんでした)";
-  return j.email;
+/* ===== STEP 0: ログイン中アカウント表示 ===== */
+function detectLoggedInAccount() {
+  // Google の JS API で "ログインしているGoogleアカウント" を推定
+  google.accounts.id.initialize({
+    client_id: "YOUR_GOOGLE_CLIENT_ID",
+    callback: (response) => {
+      const payload = JSON.parse(atob(response.credential.split('.')[1]));
+      ownerEmail = payload.email;
+      document.getElementById("currentAccount").textContent = ownerEmail;
+    }
+  });
+
+  google.accounts.id.prompt(); // ログイン状況を読み取る
 }
-fetchGoogleAccount();
 
-// プロビジョン開始
-async function startProvision() {
-  const email = document.getElementById("googleEmail").textContent;
-  if (!email || email.includes("取得できませ")) {
-    alert("Google アカウントが確認できません。ログイン後に再読み込みしてください。");
-    return;
-  }
+/* ===== STEP 1: OAuth 承認 ===== */
+document.getElementById("authorizeBtn").onclick = async () => {
+  const tokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: "YOUR_GOOGLE_CLIENT_ID",
+    scope: "https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/script.projects",
+    callback: (token) => {
+      googleAccessToken = token.access_token;
+      document.getElementById("authInfo").textContent =
+        "Google Drive / Apps Script の承認が完了しました。";
+      document.getElementById("provisionBtn").disabled = false;
+    }
+  });
 
-  document.getElementById("btnSetup").disabled = true;
-  document.getElementById("loading").style.display = "block";
+  tokenClient.requestAccessToken();
+};
 
-  const payload = { tenantId, ownerEmail: email };
+/* ===== STEP 2: Worker に Provision を依頼 ===== */
+document.getElementById("provisionBtn").onclick = async () => {
+  const payload = {
+    tenantId,
+    ownerEmail,
+    accessToken: googleAccessToken
+  };
 
-  const res = await fetch("https://lba-api.mahito-contact.workers.dev/provision", {
+  const res = await fetch("https://lba-api.mahito-contact.workers.dev/setup-start", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload)
   });
 
   const txt = await res.text();
-  let j = {}; try { j = JSON.parse(txt); } catch (_) {}
+  document.getElementById("result").textContent = txt;
+};
 
-  document.getElementById("loading").style.display = "none";
-
-  if (!j.ok) { alert("セットアップに失敗: " + j.error); return; }
-
-  const gasRes = JSON.parse(j.gasResponse || "{}");
-  if (!gasRes.ok) { alert("GAS 側エラー: " + gasRes.error); return; }
-
-  // 完了 UI
-  document.getElementById("result").style.display = "block";
-  document.getElementById("links").innerHTML = `
-    <a href="${gasRes.portalUrl}" target="_blank">講師ポータルを開く</a>
-    <a href="${gasRes.publicBookingUrl}" target="_blank">生徒向け予約ページ</a>
-  `;
-}
+/* 起動時 */
+detectLoggedInAccount();
 </script>
 
 </body>
