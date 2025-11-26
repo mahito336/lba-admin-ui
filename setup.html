@@ -1,119 +1,146 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-<meta charset="UTF-8">
-<title>LBA 環境構築</title>
-<meta name="viewport" content="width=device-width, initial-scale=1">
-
-<!-- Google Identity Services -->
-<script src="https://accounts.google.com/gsi/client" async defer></script>
-
-<style>
-  body { font-family: system-ui; padding: 20px; }
-  .card { padding: 16px; border: 1px solid #ddd; border-radius: 10px; margin-bottom: 20px; }
-  button { padding: 10px 16px; font-size: 16px; cursor: pointer; }
-  .disabled { opacity: 0.5; pointer-events: none; }
-</style>
+  <meta charset="UTF-8" />
+  <title>LBA 環境構築</title>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <style>
+    body {
+      font-family: system-ui, sans-serif;
+      background: #f5f5f5;
+      padding: 20px;
+    }
+    .card {
+      max-width: 480px;
+      margin: 40px auto;
+      background: white;
+      padding: 24px;
+      border-radius: 14px;
+      box-shadow: 0 3px 14px rgba(0,0,0,0.1);
+    }
+    .title {
+      font-size: 20px;
+      margin-bottom: 12px;
+      font-weight: 600;
+    }
+    .msg {
+      margin-top: 18px;
+      padding: 12px;
+      background: #eef;
+      border-radius: 8px;
+      word-break: break-all;
+    }
+    .btn {
+      padding: 10px 18px;
+      font-size: 15px;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+    }
+    .btn-primary {
+      background: #0066ff;
+      color: white;
+    }
+    .hidden {
+      display: none;
+    }
+  </style>
 </head>
 
 <body>
-<h2>📦 LBA 環境構築</h2>
-
-<p>
-レッスン管理環境を作成するには、<br>
-<strong>Google アカウントへのアクセス許可</strong> が必要です。
-</p>
 
 <div class="card">
-  <h3>STEP 1：Google アカウントで承認</h3>
+  <div class="title">LBA 環境構築</div>
 
-  <p>
-    これから <strong>LBA の環境（スプレッドシート）を作成する Google アカウント</strong> を選んでください。  
-    必ず「講師が普段利用している Google アカウント」を選択してください。
-  </p>
+  <p>まず、環境を構築する Google アカウントでログインしてください。</p>
 
-  <button id="authorizeBtn">Google アカウントを選択する</button>
+  <!-- ▼ Google Identity Services ログインボタン ▼ -->
+  <div id="g_id_onload"
+       data-client_id="745988638249-a91qhekn7c15b3oifaolqnc0fmrghi8p.apps.googleusercontent.com"
+       data-context="signin"
+       data-callback="handleCredentialResponse"
+       data-auto_prompt="false">
+  </div>
 
-  <pre id="authInfo" style="background:#eee; padding:10px; margin-top:15px;"></pre>
-</div>
+  <div class="g_id_signin"
+       data-type="standard"
+       data-size="large"
+       data-width="280">
+  </div>
+  <!-- ▲ Google Identity Services ログインボタン ▲ -->
 
-<div class="card">
-  <h3>STEP 2：環境構築を実行</h3>
+  <div id="step2" class="hidden">
+    <div class="msg" id="accountInfo"></div>
 
-  <p>
-    下のボタンを押すと、あなたの Google Drive 上に<br>
-    <strong>LBA 用のスプレッドシート</strong> が自動生成されます。
-  </p>
+    <p style="margin-top:16px;">このアカウントで環境を作成しますか？</p>
 
-  <button id="provisionBtn" class="disabled">環境を構築する</button>
+    <button class="btn btn-primary" onclick="startProvision()">環境を作成する</button>
 
-  <pre id="result" style="background:#eee; padding:10px; margin-top:15px;"></pre>
+    <div class="msg hidden" id="provResult"></div>
+  </div>
 </div>
 
 <script>
-/* ================================
-   設定
-================================ */
-const tenantId = new URL(location.href).searchParams.get("tenantId");
-if (!tenantId) {
-  document.body.innerHTML = "<h3>❌ tenantId が URL に含まれていません</h3>";
+/* -------------------------------------------------------------
+   JWT デコード（Google ID Token → email, name を取り出す）
+------------------------------------------------------------- */
+function parseJwt(token) {
+  return JSON.parse(atob(token.split('.')[1]));
 }
 
-let googleAccessToken = null;
-let ownerEmail = null;
+/* -------------------------------------------------------------
+   Google ログイン完了 → email を取得
+------------------------------------------------------------- */
+let ACCOUNT_EMAIL = null;
 
-/* ================================
-   STEP1：OAuth 認証
-================================ */
-document.getElementById("authorizeBtn").onclick = () => {
-  const tokenClient = google.accounts.oauth2.initTokenClient({
-    client_id: "745988638249-a91qhekn7c15b3oifaolqnc0fmrghi8p.apps.googleusercontent.com",  // ← ここだけ差し替える
-    scope: "https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/script.projects",
-    callback: (token) => {
-      googleAccessToken = token.access_token;
+function handleCredentialResponse(response) {
+  const data = parseJwt(response.credential);
 
-      // アクセストークンから email を取得
-      fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
-        headers: { Authorization: "Bearer " + googleAccessToken }
-      })
-      .then(res => res.json())
-      .then(user => {
-        ownerEmail = user.email;
+  ACCOUNT_EMAIL = data.email;
+  const name = data.name;
 
-        document.getElementById("authInfo").textContent =
-          "✔ 承認完了：このアカウントで環境を作成します → " + ownerEmail;
+  document.getElementById("accountInfo").textContent =
+    `ログイン中のアカウント： ${name}（${ACCOUNT_EMAIL}）`;
 
-        document.getElementById("provisionBtn").classList.remove("disabled");
-      })
-      .catch(err => {
-        document.getElementById("authInfo").textContent = "❌ Email 取得エラー: " + err;
-      });
-    }
-  });
+  document.getElementById("step2").classList.remove("hidden");
+}
 
-  tokenClient.requestAccessToken();
-};
+/* -------------------------------------------------------------
+   STEP 2：環境構築 API を呼び出す
+   - tenantId は URL の ?tenantId=xxxx から取得
+------------------------------------------------------------- */
+async function startProvision() {
+  const tenantId = new URL(location.href).searchParams.get("tenantId");
 
-/* ================================
-   STEP2：Worker に Provision を依頼
-================================ */
-document.getElementById("provisionBtn").onclick = async () => {
+  if (!tenantId) {
+    alert("tenantId が URL に含まれていません。");
+    return;
+  }
+  if (!ACCOUNT_EMAIL) {
+    alert("Google アカウントが取得できていません。");
+    return;
+  }
+
   const payload = {
+    mode: "provision",
     tenantId,
-    ownerEmail,
-    accessToken: googleAccessToken
+    ownerEmail: ACCOUNT_EMAIL
   };
 
-  const res = await fetch("https://lba-api.mahito-contact.workers.dev/setup-start", {
+  const apiUrl = "https://lba-api.mahito-contact.workers.dev/provision";
+
+  const res = await fetch(apiUrl, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload)
   });
 
   const txt = await res.text();
-  document.getElementById("result").textContent = txt;
-};
+  const out = document.getElementById("provResult");
 
+  out.classList.remove("hidden");
+  out.textContent = txt;
+}
 </script>
 
 </body>
