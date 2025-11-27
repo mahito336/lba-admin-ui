@@ -7,7 +7,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1.0" />
 
   <!-- Google Identity Services -->
-  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script src="https://accounts.google.com/gsi/client" async defer onload="onGsiLoaded()"></script>
 
   <style>
     :root {
@@ -944,6 +944,15 @@
     }
 
     // ========================
+    // エラー表示 (ログイン画面用)
+    // ========================
+    function showError(msg) {
+      const statusEl = document.getElementById("login-status");
+      statusEl.style.color = "#b91c1c";
+      statusEl.textContent = msg;
+    }
+
+    // ========================
     // Google Identity callback
     // ========================
     function handleCredentialResponse(response) {
@@ -970,14 +979,7 @@
     }
 
     
-    // ========================
-    // エラー表示 (ログイン画面用)
-    // ========================
-    function showError(msg) {
-      const statusEl = document.getElementById("login-status");
-      statusEl.style.color = "#b91c1c";
-      statusEl.textContent = msg;
-    }
+
   
     // ========================
     // ログイン後の処理
@@ -1028,7 +1030,7 @@
     // ========================
     // GSI 初期化
     // ========================
-    window.onload = function () {
+    function onGsiLoaded() {
       const tenantId = getTenantIdFromUrl();
       document.getElementById("login-tenant-id").textContent = tenantId || "-";
 
@@ -1041,7 +1043,8 @@
         document.getElementById("g_id_signin"),
         { theme: "outline", size: "large", shape: "pill", text: "continue_with" }
       );
-    };
+    }
+
   </script>
 </body>
 </html>
