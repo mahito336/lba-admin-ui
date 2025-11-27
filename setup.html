@@ -1,141 +1,169 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-<meta charset="UTF-8" />
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>LBA 環境構築</title>
 
-<script>
-// -------------------------------
-//  OAuth 設定
-// -------------------------------
-const CLIENT_ID =
-  "990347544512-tu7i4t6cg65t4ihdtkbqo00gobtuvas0.apps.googleusercontent.com";
-
-const SCOPES = [
-  "openid",
-  "https://www.googleapis.com/auth/userinfo.email",
-  "https://www.googleapis.com/auth/userinfo.profile",
-  "https://www.googleapis.com/auth/drive.file",
-  "https://www.googleapis.com/auth/script.projects",
-  "https://www.googleapis.com/auth/script.deployments",
-].join(" ");
-
-let ACCESS_TOKEN = null;
-let USER_EMAIL = null;
-let COPIED_FILE_ID = null;
-
-// -------------------------------
-// Google OAuth → トークン取得
-// -------------------------------
-async function authenticate() {
-  const url =
-    "https://accounts.google.com/o/oauth2/v2/auth?" +
-    new URLSearchParams({
-      client_id: CLIENT_ID,
-      redirect_uri: window.location.origin + window.location.pathname,
-      response_type: "token",
-      scope: SCOPES,
-      include_granted_scopes: "true",
-      prompt: "consent",
-    });
-
-  window.location.href = url;
-}
-
-// -------------------------------
-// ページ読み込み時 → URLからアクセストークン取得
-// -------------------------------
-window.onload = async () => {
-  if (window.location.hash.includes("access_token")) {
-    const params = new URLSearchParams(window.location.hash.substring(1));
-    ACCESS_TOKEN = params.get("access_token");
-
-    document.getElementById("step-auth").style.display = "none";
-    document.getElementById("step-info").style.display = "block";
-
-    await fetchUserInfo();
-  }
-};
-
-// -------------------------------
-// ユーザー情報取得
-// -------------------------------
-async function fetchUserInfo() {
-  const res = await fetch("https://www.googleapis.com/oauth2/v2/userinfo", {
-    headers: { Authorization: "Bearer " + ACCESS_TOKEN },
-  });
-  const data = await res.json();
-
-  USER_EMAIL = data.email;
-  document.getElementById("user-email").textContent = USER_EMAIL;
-}
-
-// -------------------------------
-// STEP2: テンプレートを講師Driveにコピー
-// -------------------------------
-async function copyTemplate() {
-  const templateFileId = "1Ff8cgHw_Y9rbjue0sIO8xIWwmMY5rPHAUWoFigXW6nE"; // テンプレID固定
-  const copyName = "LBA_TEACHER_SPREADSHEET";
-
-  const res = await fetch(
-    `https://www.googleapis.com/drive/v3/files/${templateFileId}/copy`,
-    {
-      method: "POST",
-      headers: {
-        Authorization: "Bearer " + ACCESS_TOKEN,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ name: copyName }),
-    }
-  );
-
-  const data = await res.json();
-  COPIED_FILE_ID = data.id;
-
-  document.getElementById("copied-file-id").textContent = COPIED_FILE_ID;
-  document.getElementById("step-copy").style.display = "none";
-  document.getElementById("step-script").style.display = "block";
-}
-</script>
-
 <style>
-body { font-family: system-ui; margin: 20px; }
-.step { padding: 16px; margin-bottom: 20px; background: #f0f7ff; border-radius: 10px; }
+  body {
+    font-family: system-ui;
+    background:#f5f5f5;
+    padding:20px;
+  }
+  #app {
+    max-width:480px;
+    background:white;
+    border-radius:12px;
+    margin:0 auto;
+    padding:24px;
+    box-shadow:0 2px 6px rgba(0,0,0,0.1);
+  }
+  button {
+    padding:12px 20px;
+    font-size:16px;
+    border-radius:8px;
+    border:none;
+    background:#0066ff;
+    color:white;
+    margin-top:18px;
+    width:100%;
+    cursor:pointer;
+  }
+  #statusBox {
+    background:#f0f0f0;
+    padding:12px;
+    margin-top:20px;
+    border-radius:8px;
+    font-size:14px;
+    color:#555;
+    word-break: break-all;
+  }
 </style>
+
+<!-- Google Identity Services (GSI) -->
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 
 </head>
 <body>
 
-<h2>LBA 環境構築（正式版）</h2>
+<div id="app">
+  <h2>LBA — 環境構築</h2>
 
-<!-- STEP 1: OAuth -->
-<div class="step" id="step-auth">
-  <h3>STEP1：Googleアカウントにログイン</h3>
-  <button onclick="authenticate()">Googleアカウントを選択する</button>
-</div>
+  <div id="tenantBox"></div>
 
-<!-- STEP 2: User Info -->
-<div class="step" id="step-info" style="display:none">
-  <h3>STEP2：ログイン確認</h3>
-  <p>ログイン中のアカウント：</p>
-  <p style="font-weight:bold" id="user-email">確認中...</p>
-  <button onclick="document.getElementById('step-copy').style.display='block'">
-    次へ進む
+  <p>この環境はあなたの Google アカウントと連携して構築されます。</p>
+
+  <div id="g_id_signin"></div>
+
+  <button id="provisionBtn" style="display:none;">
+    このアカウントで構築する
   </button>
+
+  <div id="statusBox"></div>
 </div>
 
-<!-- STEP 3: Copy Template -->
-<div class="step" id="step-copy" style="display:none">
-  <h3>STEP3：LBA テンプレートをコピーする</h3>
-  <button onclick="copyTemplate()">スプレッドシートをコピー</button>
-  <p>コピーされた FileID：<span id="copied-file-id">未コピー</span></p>
-</div>
+<script>
+let jwtCredential = null;
+let selectedEmail = null;
 
-<!-- STEP 4: GAS（後で作成） -->
-<div class="step" id="step-script" style="display:none">
-  <h3>STEP4：GAS プロジェクトを構築する</h3>
-  <p>※まだ実装中：次回 GAS 自動生成を追加します。</p>
-</div>
+// tenantId を URL から抽出
+const url = new URL(location.href);
+const tenantId = url.searchParams.get("tenantId");
+
+if (!tenantId) {
+  document.getElementById("tenantBox").innerHTML =
+    "<p style='color:red;'>tenantId が URL にありません。メールのリンクからアクセスしてください。</p>";
+} else {
+  document.getElementById("tenantBox").innerHTML =
+    `<p><b>Tenant ID:</b> ${tenantId}</p>`;
+}
+
+// Google OAuth (GSI)
+window.onload = function () {
+  google.accounts.id.initialize({
+    client_id: "990347544512-tu7i4t6cg65t4ihdtkbqo00gobtuvas0.apps.googleusercontent.com",
+    callback: handleCredentialResponse
+  });
+
+  google.accounts.id.renderButton(
+    document.getElementById("g_id_signin"),
+    { theme: "outline", size: "large" }
+  );
+};
+
+function handleCredentialResponse(response) {
+  try {
+    jwtCredential = response.credential;
+
+    // JWT decode → email 取得
+    const payload = JSON.parse(atob(jwtCredential.split('.')[1]));
+    selectedEmail = payload.email;
+
+    document.getElementById("statusBox").innerHTML =
+      `<b>認証済み:</b> ${selectedEmail}`;
+
+    document.getElementById("provisionBtn").style.display = "block";
+
+  } catch (err) {
+    document.getElementById("statusBox").innerHTML =
+      "エラー: 認証情報を解析できませんでした。";
+  }
+}
+
+// Worker 経由で GAS へプロビジョンを依頼
+document.getElementById("provisionBtn").onclick = async function () {
+  if (!tenantId || !selectedEmail) return;
+
+  document.getElementById("statusBox").innerHTML =
+    "環境を構築しています…（数秒〜10秒ほど）";
+
+  try {
+    const res = await fetch(
+      "https://lba-api.mahito-contact.workers.dev/provision",
+      {
+        method:"POST",
+        headers:{ "Content-Type":"application/json" },
+        body: JSON.stringify({
+          tenantId,
+          ownerEmail: selectedEmail,
+          credential: jwtCredential
+        })
+      }
+    );
+
+    const data = await res.json();
+    console.log("Worker response:", data);
+
+    if (!data.ok) {
+      document.getElementById("statusBox").innerHTML =
+        "Worker エラー：" + data.error;
+      return;
+    }
+
+    const gas = JSON.parse(data.gasResponse);
+
+    if (gas.ok) {
+      document.getElementById("statusBox").innerHTML =
+        `<b>環境構築が完了しました！</b><br><br>
+
+         ▼ 講師ポータル<br>
+         <a href="${gas.portalUrl}" target="_blank">${gas.portalUrl}</a><br><br>
+
+         ▼ 生徒予約ページ<br>
+         <a href="${gas.publicBookingUrl}" target="_blank">${gas.publicBookingUrl}</a>`;
+    } else {
+      document.getElementById("statusBox").innerHTML =
+        "GAS エラー：" + gas.error;
+    }
+
+  } catch (err) {
+    console.error(err);
+    document.getElementById("statusBox").innerHTML =
+      "通信エラー：" + err.message;
+  }
+};
+</script>
 
 </body>
 </html>
