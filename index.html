@@ -1018,10 +1018,10 @@
         }
   
         //（将来的に）OWNER_GOOGLE_EMAIL と照合してここでアクセス制御
-        // if (info.ownerEmail && info.ownerEmail !== email) {
-        //   showError("この Google アカウントではアクセスできません。");
-        //   return;
-        // }
+        if (info.ownerEmail && info.ownerEmail !== email) {
+          showError("この Google アカウントではアクセスできません。");
+          return;
+        }
   
         // ログインビュー非表示 → アプリ表示
         document.getElementById("login-view").style.display = "none";
