@@ -969,6 +969,62 @@
       }
     }
 
+    
+    // ========================
+    // エラー表示 (ログイン画面用)
+    // ========================
+    function showError(msg) {
+      const statusEl = document.getElementById("login-status");
+      statusEl.style.color = "#b91c1c";
+      statusEl.textContent = msg;
+    }
+  
+    // ========================
+    // ログイン後の処理
+    // ========================
+    async function proceedAfterLogin(email) {
+      currentUserEmail = email;
+  
+      // 画面に表示（右上）
+      try {
+        document.getElementById("topbar-user-email").textContent = email;
+      } catch (e) {}
+  
+      const tenantId = getTenantIdFromUrl();
+      if (!tenantId) {
+        showError("tenantId が URL にありません。");
+        return;
+      }
+  
+      // REGISTRY の STATUS などを読み込み
+      try {
+        const info = await fetchTenantInfo(tenantId);
+  
+        if (!info || !info.ok) {
+          showError("テナント情報が見つかりません。");
+          return;
+        }
+  
+        //（将来的に）OWNER_GOOGLE_EMAIL と照合してここでアクセス制御
+        // if (info.ownerEmail && info.ownerEmail !== email) {
+        //   showError("この Google アカウントではアクセスできません。");
+        //   return;
+        // }
+  
+        // ログインビュー非表示 → アプリ表示
+        document.getElementById("login-view").style.display = "none";
+        document.getElementById("app-shell").style.display = "flex";
+  
+        // ダッシュボード初期化
+        initPortal();
+  
+      } catch (err) {
+        console.error(err);
+        showError("テナント情報の取得中にエラーが発生しました。");
+      }
+    }    
+
+   
     // ========================
     // GSI 初期化
     // ========================
