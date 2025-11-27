@@ -957,29 +957,27 @@
     // ========================
     function handleCredentialResponse(response) {
       try {
-        // GSI が提供する公式デコード関数
-        const decoded = google.accounts.id.decodeJwtResponse(response.credential);
+        // HTMLエンコード対策
+        const clean = response.credential.replace(/&#43;/g, '+')
+                                         .replace(/&#61;/g, '=')
+                                         .replace(/&#47;/g, '/');
     
-        // decoded.email が取れる
+        const decoded = google.accounts.id.decodeJwtResponse(clean);
+    
         const email = decoded.email;
-        const sub = decoded.sub;
     
         if (!email) {
           showError("Google アカウントのメール取得に失敗しました。");
           return;
         }
     
-        // 認証成功 → REGISTRY lookup → admin UIへ進む
         proceedAfterLogin(email);
     
       } catch (e) {
         console.error(e);
         showError("認証情報の解析に失敗しました。");
       }
-    }
-
-    
-
+    }  
   
     // ========================
     // ログイン後の処理
