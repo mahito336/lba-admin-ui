@@ -6,6 +6,9 @@
   <!-- スマホ向け -->
   <meta name="viewport" content="width=device-width,initial-scale=1.0" />
 
+  <!-- Google Identity Services -->
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+
   <style>
     :root {
       --bg-body: #f3f4f6;
@@ -53,7 +56,70 @@
       font-family: inherit;
     }
 
-    /* ========= レイアウト全体 ========= */
+    /* ========= 共通コンポーネント ========= */
+
+    .card {
+      background: var(--bg-card);
+      border-radius: var(--radius-card);
+      padding: 12px 14px;
+      box-shadow: var(--shadow-soft);
+      border: 1px solid rgba(148, 163, 184, 0.18);
+    }
+
+    /* ========= ログイン画面 ========= */
+
+    #login-view {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px 16px;
+    }
+
+    .login-card {
+      max-width: 420px;
+      width: 100%;
+      background: #fff;
+      border-radius: 16px;
+      padding: 24px 20px 20px;
+      box-shadow: 0 18px 40px rgba(15, 23, 42, 0.14);
+      border: 1px solid rgba(148, 163, 184, 0.35);
+    }
+
+    .login-title {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .login-subtitle {
+      font-size: 13px;
+      color: var(--text-sub);
+      margin-bottom: 18px;
+    }
+
+    .login-tenant {
+      font-size: 12px;
+      padding: 8px 10px;
+      border-radius: 10px;
+      background: #f9fafb;
+      border: 1px dashed #e5e7eb;
+      margin-bottom: 16px;
+    }
+
+    .login-status {
+      font-size: 11px;
+      color: var(--text-sub);
+      margin-top: 10px;
+    }
+
+    .login-footer {
+      margin-top: 16px;
+      font-size: 11px;
+      color: var(--text-sub);
+    }
+
+    /* ========= アプリ本体レイアウト ========= */
 
     .app-shell {
       display: flex;
@@ -262,20 +328,11 @@
       display: block;
     }
 
-    /* --- カード系 --- */
     .card-grid {
       display: grid;
       grid-template-columns: repeat(3, minmax(0, 1fr));
       gap: 14px;
       margin-bottom: 18px;
-    }
-
-    .card {
-      background: var(--bg-card);
-      border-radius: var(--radius-card);
-      padding: 12px 14px;
-      box-shadow: var(--shadow-soft);
-      border: 1px solid rgba(148, 163, 184, 0.18);
     }
 
     .card-header {
@@ -309,7 +366,6 @@
       color: #1d4ed8;
     }
 
-    /* --- セクション --- */
     .section {
       margin-bottom: 18px;
     }
@@ -356,7 +412,6 @@
       margin-left: 4px;
     }
 
-    /* --- アラート / エラー --- */
     .alert {
       padding: 10px 12px;
       border-radius: 10px;
@@ -416,7 +471,6 @@
       color: #1d4ed8;
     }
 
-    /* --- モバイル用オーバーレイ（サイドバー表示時） --- */
     .overlay {
       position: fixed;
       inset: 0;
@@ -429,9 +483,6 @@
       display: block;
     }
 
-    /* ========= レスポンシブ ========= */
-
-    /* スマホサイズ: サイドバーはデフォ非表示、ボトムナビ有効 */
     @media (max-width: 768px) {
       .sidebar {
         transform: translateX(-100%);
@@ -462,7 +513,6 @@
       }
     }
 
-    /* PCサイズ: ボトムナビ隠す */
     @media (min-width: 769px) {
       .bottom-nav {
         display: none;
@@ -475,10 +525,36 @@
   </style>
 </head>
 <body>
+  <!-- ログインビュー -->
+  <div id="login-view">
+    <div class="login-card">
+      <div class="login-title">講師ポータルにログイン</div>
+      <div class="login-subtitle">
+        Google アカウントでログインして、レッスン・予約・動画共有を管理します。
+      </div>
+
+      <div class="login-tenant" id="login-tenant-box">
+        Tenant ID: <strong id="login-tenant-id">-</strong><br/>
+        URL に ?tenantId=XXXX が付いているか確認してください。
+      </div>
+
+      <div id="g_id_signin"></div>
+
+      <div class="login-status" id="login-status">
+        Google ログイン後、このブラウザでのみポータルにアクセスできます。
+      </div>
+
+      <div class="login-footer">
+        ※ 将来的には、REGISTRY の OWNER_GOOGLE_EMAIL と照合して講師ごとにアクセスを制限します。
+      </div>
+    </div>
+  </div>
+
   <!-- モバイル時：サイドバー用オーバーレイ -->
   <div id="overlay" class="overlay"></div>
 
-  <div class="app-shell">
+  <!-- アプリ本体（ログイン完了後に表示） -->
+  <div id="app-shell" class="app-shell" style="display:none;">
     <!-- サイドバー -->
     <aside id="sidebar" class="sidebar">
       <div class="sidebar-header">
@@ -503,7 +579,6 @@
           <span class="sidebar-nav-icon">🎓</span>
           <span>レッスン</span>
         </li>
-        <!-- 予約 / 動画 / 設定などは今後ここに追加 -->
       </ul>
 
       <div class="sidebar-section-title">ステータス</div>
@@ -520,7 +595,6 @@
 
     <!-- メインエリア -->
     <div class="main-area">
-      <!-- トップバー -->
       <header class="topbar">
         <div class="topbar-left">
           <div class="topbar-title">講師ポータル</div>
@@ -539,13 +613,12 @@
           <div class="topbar-tenant">
             <div class="tenant-id-label">Tenant ID</div>
             <div class="tenant-id-value" id="tenant-id-label">-</div>
+            <div style="font-size:10px;color:#6b7280;" id="topbar-user-email"></div>
           </div>
         </div>
       </header>
 
-      <!-- コンテンツ -->
       <div class="content">
-        <!-- アラートエリア -->
         <div id="alert-area"></div>
 
         <!-- ダッシュボード -->
@@ -687,6 +760,9 @@
   </nav>
 
   <script>
+    // ========= 共通変数 =========
+    let currentUserEmail = null;
+
     // ========================
     // クエリから tenantId を取得
     // ========================
@@ -700,7 +776,7 @@
     // ========================
     async function fetchTenantInfo(tenantId) {
       const url =
-        "https://lba-api.mahito-contact.workers.dev/lookup?tenantId=" +
+        "https://api.lba.mahito.app/lookup?tenantId=" +
         encodeURIComponent(tenantId);
 
       const res = await fetch(url, { method: "GET" });
@@ -727,7 +803,6 @@
       tenantIdLabel.textContent = tenantId || "-";
 
       const badgePlan = document.getElementById("badge-plan");
-      const badgeStatus = document.getElementById("badge-status");
       const badgeStatusText = document.getElementById("badge-status-text");
 
       const sidebarStatus = document.getElementById("sidebar-tenant-status");
@@ -755,7 +830,6 @@
 
       metricStatus.textContent = status;
 
-      // ステータスに応じて軽く案内を変える
       if (status === "READY") {
         setAlert(
           "セットアップ完了済みです。このポータルからレッスンやスケジュールの登録を進めてください。",
@@ -778,25 +852,23 @@
     // ナビゲーション制御
     // ========================
     function activateView(viewName) {
-      // ビューを切り替え
       document.querySelectorAll(".view").forEach((el) => {
         el.classList.remove("view-active");
       });
       const target = document.getElementById("view-" + viewName);
       if (target) target.classList.add("view-active");
 
-      // サイドバー
       document.querySelectorAll(".sidebar-nav-item").forEach((el) => {
         const v = el.getAttribute("data-view");
         el.classList.toggle("active", v === viewName);
       });
 
-      // ボトムナビ
       document.querySelectorAll(".bottom-nav-btn").forEach((el) => {
         const v = el.getAttribute("data-view");
+        const role = el.getAttribute("data-role");
         if (v) {
           el.classList.toggle("active", v === viewName);
-        } else if (el.getAttribute("data-role") === "menu") {
+        } else if (role === "menu") {
           el.classList.remove("active");
         }
       });
@@ -806,18 +878,15 @@
       const sidebar = document.getElementById("sidebar");
       const overlay = document.getElementById("overlay");
 
-      // サイドバー項目クリック
       document.querySelectorAll(".sidebar-nav-item").forEach((el) => {
         el.addEventListener("click", () => {
           const view = el.getAttribute("data-view");
           activateView(view);
-          // モバイルではメニュー閉じる
           sidebar.classList.remove("open");
           overlay.classList.remove("visible");
         });
       });
 
-      // ボトムナビ
       document.querySelectorAll(".bottom-nav-btn").forEach((btn) => {
         const view = btn.getAttribute("data-view");
         const role = btn.getAttribute("data-role");
@@ -828,14 +897,12 @@
           });
         } else if (role === "menu") {
           btn.addEventListener("click", () => {
-            // モバイル用サイドバー表示
             sidebar.classList.toggle("open");
             overlay.classList.toggle("visible");
           });
         }
       });
 
-      // オーバーレイクリックでサイドバーを閉じる
       overlay.addEventListener("click", () => {
         sidebar.classList.remove("open");
         overlay.classList.remove("visible");
@@ -843,12 +910,15 @@
     }
 
     // ========================
-    // 初期化
+    // ポータル初期化（ログイン後に呼ぶ）
     // ========================
-    (async function init() {
+    async function initPortal() {
       setupNavigation();
 
       const tenantId = getTenantIdFromUrl();
+      const loginTenantIdEl = document.getElementById("login-tenant-id");
+      loginTenantIdEl.textContent = tenantId || "-";
+
       if (!tenantId) {
         updateTenantUI("", null);
         setAlert("URL に ?tenantId=XXXX が指定されていません。", "error");
@@ -859,7 +929,6 @@
         const info = await fetchTenantInfo(tenantId);
         updateTenantUI(tenantId, info);
 
-        // ダッシュボードのダミーメトリクスを少しだけ遊ばせる
         const todayEl = document.getElementById("metric-today-lessons");
         const monthEl = document.getElementById("metric-month-reservations");
         todayEl.textContent = "— 件";
@@ -872,7 +941,50 @@
           "error"
         );
       }
-    })();
+    }
+
+    // ========================
+    // Google Identity callback
+    // ========================
+    function handleCredentialResponse(response) {
+      const statusEl = document.getElementById("login-status");
+
+      try {
+        const payload = JSON.parse(atob(response.credential.split(".")[1]));
+        currentUserEmail = payload.email;
+
+        statusEl.textContent = "ログインしました: " + currentUserEmail;
+        document.getElementById("topbar-user-email").textContent = currentUserEmail;
+
+        // ログインビューを隠してポータルを表示
+        document.getElementById("login-view").style.display = "none";
+        document.getElementById("app-shell").style.display = "flex";
+
+        // ポータル初期化
+        initPortal();
+      } catch (e) {
+        console.error(e);
+        statusEl.textContent = "認証情報の解析に失敗しました。別のアカウントでお試しください。";
+      }
+    }
+
+    // ========================
+    // GSI 初期化
+    // ========================
+    window.onload = function () {
+      const tenantId = getTenantIdFromUrl();
+      document.getElementById("login-tenant-id").textContent = tenantId || "-";
+
+      google.accounts.id.initialize({
+        client_id: "990347544512-tu7i4t6cg65t4ihdtkbqo00gobtuvas0.apps.googleusercontent.com",
+        callback: handleCredentialResponse,
+      });
+
+      google.accounts.id.renderButton(
+        document.getElementById("g_id_signin"),
+        { theme: "outline", size: "large", shape: "pill", text: "continue_with" }
+      );
+    };
   </script>
 </body>
 </html>
