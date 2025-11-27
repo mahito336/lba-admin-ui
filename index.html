@@ -947,24 +947,25 @@
     // Google Identity callback
     // ========================
     function handleCredentialResponse(response) {
-      const statusEl = document.getElementById("login-status");
-
       try {
-        const payload = JSON.parse(atob(response.credential.split(".")[1]));
-        currentUserEmail = payload.email;
-
-        statusEl.textContent = "ログインしました: " + currentUserEmail;
-        document.getElementById("topbar-user-email").textContent = currentUserEmail;
-
-        // ログインビューを隠してポータルを表示
-        document.getElementById("login-view").style.display = "none";
-        document.getElementById("app-shell").style.display = "flex";
-
-        // ポータル初期化
-        initPortal();
+        // GSI が提供する公式デコード関数
+        const decoded = google.accounts.id.decodeJwtResponse(response.credential);
+    
+        // decoded.email が取れる
+        const email = decoded.email;
+        const sub = decoded.sub;
+    
+        if (!email) {
+          showError("Google アカウントのメール取得に失敗しました。");
+          return;
+        }
+    
+        // 認証成功 → REGISTRY lookup → admin UIへ進む
+        proceedAfterLogin(email);
+    
       } catch (e) {
         console.error(e);
-        statusEl.textContent = "認証情報の解析に失敗しました。別のアカウントでお試しください。";
+        showError("認証情報の解析に失敗しました。");
       }
     }
 
